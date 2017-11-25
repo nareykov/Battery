@@ -27,13 +27,23 @@ public class Controller {
     @FXML
     private Slider slider;
 
-    private double currentLockTime;
+    private int currentLockTime;
+    private int initialLockTime;
+    private int counter = 0;
+    private double previousLevel = 100;
+    private String remainingTime;
 
     private RefreshThread refreshThread = new RefreshThread();
 
     public Controller() {
+        initialLockTime = getCurrentLockTime();
         refreshThread.start();
-        refreshThread.addListeners(() -> updateLabels());
+        refreshThread.addListeners(new DataListener() {
+            @Override
+            public void refreshData() {
+                updateLabels();
+            }
+        });
         Platform.runLater(() -> {
             currentLockTime = getCurrentLockTime();
             slider.setValue(currentLockTime);
@@ -50,20 +60,22 @@ public class Controller {
 
     private void updateLabels() {
         Platform.runLater(() -> {
-            battery.setText(refreshThread.getList().get(0) + ", "
-                    + refreshThread.getList().get(1));
-            time.setText(refreshThread.getList().get(2));
+            battery.setText(refreshThread.getChargeLevel());
             String adapterInfo = refreshThread.getAdapterInfo();
             if(adapterInfo.equals("online")) {
+                setLockTime(initialLockTime);
+                timeLock.setText(Integer.toString(initialLockTime) + " seconds");
+                slider.setValue(initialLockTime);
                 slider.setDisable(true);
             } else {
                 slider.setDisable(false);
             }
             adapter.setText(adapterInfo);
+            time.setText(getEstimateTime());
         });
     }
 
-    private double getCurrentLockTime() {
+    private int getCurrentLockTime() {
         try {
             Process process = Runtime.getRuntime().exec("gsettings get org.gnome.desktop.session idle-delay");
             BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
@@ -78,17 +90,34 @@ public class Controller {
     }
 
     public void clickApply() {
-        try {
-            Runtime.getRuntime().exec("gsettings set org.gnome.desktop.session idle-delay " +
-                    Integer.toString((int)slider.getValue()));
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+        setLockTime((int)slider.getValue());
         apply.setDisable(true);
     }
 
-    public void shutdown() {
-        refreshThread.shutdown();
+    private void setLockTime(int time) {
+        try {
+            Runtime.getRuntime().exec("gsettings set org.gnome.desktop.session idle-delay " +
+                    Integer.toString(time));
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private String getEstimateTime() {
+        if (counter == 5) {
+            if (previousLevel != 0) {
+                Double currentLevel = Double.parseDouble(refreshThread.getChargeLevel().split("%")[0]);
+                Double speed = (previousLevel - currentLevel) / 10;
+                Double time = currentLevel / speed;
+                counter = 0;
+                remainingTime =  Integer.toString((int)(time / 3600)) + ":"
+                        + Integer.toString((int)((time % 3600) / 60)) + ":"
+                        + Integer.toString((int)(time % 60));
+                previousLevel = currentLevel;
+            }
+        }
+        counter++;
+        return remainingTime;
     }
 
 }
