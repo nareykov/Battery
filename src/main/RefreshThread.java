@@ -13,14 +13,17 @@ public class RefreshThread extends Thread {
     private String chargeLevel;
     private String adapterInfo;
     private List<DataListener> listeners = new ArrayList<>();
+    private int sleepTime;
+    private boolean work = true;
 
-    public RefreshThread() {
+    public RefreshThread(int sleepTime) {
         super("RefreshThread");
+        this.sleepTime = sleepTime;
     }
 
     @Override
     public void run() {
-        while (true) {
+        while (work) {
             try {
                 process = Runtime.getRuntime().exec("acpitool");
                 reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
@@ -30,7 +33,7 @@ public class RefreshThread extends Thread {
                 process.destroy();
                 reader.close();
                 notifyListeners();
-                sleep(2000);
+                sleep(sleepTime * 1000);
             } catch (IOException e) {
                 if(process != null) process.destroy();
                 e.printStackTrace();
@@ -56,5 +59,13 @@ public class RefreshThread extends Thread {
 
     public String getAdapterInfo() {
         return adapterInfo;
+    }
+
+    public int getSleepTime() {
+        return sleepTime;
+    }
+
+    public void close() {
+        work = false;
     }
 }
