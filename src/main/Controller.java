@@ -33,7 +33,7 @@ public class Controller {
     private double previousLevel = 100;
     private String remainingTime;
 
-    private RefreshThread refreshThread = new RefreshThread();
+    private RefreshThread refreshThread = new RefreshThread(2);
 
     public Controller() {
         initialLockTime = getCurrentLockTime();
@@ -104,10 +104,11 @@ public class Controller {
     }
 
     private String getEstimateTime() {
-        if (counter == 5) {
+
+        if (counter == getMultiplier()) {
             if (previousLevel != 0) {
                 Double currentLevel = Double.parseDouble(refreshThread.getChargeLevel().split("%")[0]);
-                Double speed = (previousLevel - currentLevel) / 10;
+                Double speed = (previousLevel - currentLevel) / (getMultiplier() * refreshThread.getSleepTime());
                 Double time = currentLevel / speed;
                 counter = 0;
                 remainingTime =  Integer.toString((int)(time / 3600)) + ":"
@@ -120,4 +121,20 @@ public class Controller {
         return remainingTime;
     }
 
+    private int getMultiplier() {
+        if(refreshThread.getSleepTime() >= 1) {
+            return 5;
+        } else {
+            return 10;
+        }
+    }
+
+    public void close() {
+        setLockTime(initialLockTime);
+        refreshThread.close();
+    }
+
+    public int getInitialLockTime() {
+        return initialLockTime;
+    }
 }

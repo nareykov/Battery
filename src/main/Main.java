@@ -7,6 +7,8 @@ import javafx.scene.Scene;
 import javafx.stage.Stage;
 import javafx.stage.WindowEvent;
 
+import java.beans.EventHandler;
+
 public class Main extends Application {
 
     @Override
@@ -16,6 +18,9 @@ public class Main extends Application {
         Controller controller = loader.getController();
         primaryStage.setTitle("Battery Manager");
         primaryStage.setScene(new Scene(root, 633, 453));
+        primaryStage.setOnCloseRequest(windowEvent -> {
+            controller.close();
+        });
         primaryStage.show();
     }
 
